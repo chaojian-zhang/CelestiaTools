@@ -5,25 +5,25 @@ namespace VirtualTextureReferenceSet
     internal class Program
     {
         private const string AppName = "VirtualTextureReferenceSet";
-        private const string AppVersion = "1.0.0";
+        private const string AppVersion = "0.0.1";
 
-        private static readonly SKColor[] LevelColors = new[]
-        {
-        // 13 distinct colors for levels 0..12
-        SKColors.Red,
-        SKColors.Blue,
-        SKColors.Green,
-        SKColors.Orange,
-        SKColors.Purple,
-        SKColors.Teal,
-        SKColors.Brown,
-        SKColors.Magenta,
-        SKColors.Goldenrod,
-        SKColors.Crimson,
-        SKColors.DarkCyan,
-        SKColors.SaddleBrown,
-        SKColors.DarkViolet
-    };
+        private static readonly SKColor[] LevelColors =
+        [
+            // 13 distinct colors for levels 0..12
+            SKColors.Red,
+            SKColors.Blue,
+            SKColors.Green,
+            SKColors.Orange,
+            SKColors.Purple,
+            SKColors.Teal,
+            SKColors.Brown,
+            SKColors.Magenta,
+            SKColors.Goldenrod,
+            SKColors.Crimson,
+            SKColors.DarkCyan,
+            SKColors.SaddleBrown,
+            SKColors.DarkViolet
+        ];
 
         public static int Main(string[] args)
         {
@@ -43,10 +43,10 @@ namespace VirtualTextureReferenceSet
                 var (outputRoot, tile, maxLevel) = ParseArgs(args);
 
                 if (maxLevel < 0 || maxLevel > 12)
-                    throw new ArgumentException("levels must be between 0 and 12 inclusive.");
+                    throw new ArgumentException("Levels must be between 0 and 12 inclusive.");
 
                 if (tile <= 0)
-                    throw new ArgumentException("tile must be a positive integer.");
+                    throw new ArgumentException("Tile must be a positive integer.");
 
                 Directory.CreateDirectory(outputRoot);
 
@@ -96,6 +96,9 @@ namespace VirtualTextureReferenceSet
                     });
                 }
 
+                // Sidecar files next to the output folder
+                WriteSidecarFiles(outputRoot, tile);
+
                 Console.WriteLine("Done.");
                 return 0;
             }
@@ -144,7 +147,7 @@ namespace VirtualTextureReferenceSet
         private static void PrintHelp()
         {
             Console.WriteLine($@"{AppName} {AppVersion}
-Generate virtual-texture reference tiles with SkiaSharp.
+Generate virtual-texture reference tiles with SkiaSharp and write .ctx and .ssc sidecars.
 
 Usage:
   {AppName} <outputFolder> [--tile <int>] [--levels <0-12>]
@@ -160,9 +163,11 @@ Options:
   --help, -h               Show help.
   --version, -v            Show version.
 
-Output:
+Outputs:
   level<N>/tx_<x>_<y>.png  White background, thick colored border, centered text ""<x>_<y>"".
-  Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.");
+  <FolderName>.ctx         Next to the output folder. Points ImageDirectory to <FolderName>.
+  <FolderName>.ssc         Next to the output folder. References the .ctx.
+Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.");
         }
 
         private static SKPaint MakeBorderPaint(int tile, SKColor color)
@@ -219,6 +224,39 @@ Output:
 
             float centerX = tile * 0.5f;
             canvas.DrawText(text, centerX, baseline, paint);
+        }
+
+        private static void WriteSidecarFiles(string outputRoot, int tile)
+        {
+            // Determine sibling file locations: same parent as the output directory
+            string parentDir = Directory.GetParent(outputRoot)?.FullName
+                               ?? throw new InvalidOperationException("cannot resolve parent directory");
+            string folderName = Path.GetFileName(outputRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+            string ctxPath = Path.Combine(parentDir, $"{folderName}.ctx");
+            string sscPath = Path.Combine(parentDir, $"{folderName}.ssc");
+
+            // .ctx content
+            string ctx = $"VirtualTexture{Environment.NewLine}" +
+                         $"{{{Environment.NewLine}" +
+                         $"        ImageDirectory \"{folderName}\"{Environment.NewLine}" +
+                         $"        BaseSplit 0{Environment.NewLine}" +
+                         $"        TileSize {tile}{Environment.NewLine}" +
+                         $"        TileType \"png\"{Environment.NewLine}" +
+                         $"}}{Environment.NewLine}";
+
+            // .ssc content (exact strings per your template)
+            string ssc = $"AltSurface \"{folderName}\" \"Parent/Child\"{Environment.NewLine}" +
+                         $"{{{Environment.NewLine}" +
+                         $"    Texture \"{folderName}.ctx\"{Environment.NewLine}" +
+                         $"}}{Environment.NewLine}";
+
+            File.WriteAllText(ctxPath, ctx);
+            File.WriteAllText(sscPath, ssc);
+
+            Console.WriteLine($@"Wrote:
+  {ctxPath}
+  {sscPath}");
         }
     }
 }
