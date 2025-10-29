@@ -149,9 +149,11 @@ namespace VirtualTextureReferenceSet
                         SKRect rect = new(margin, margin, tile - margin, tile - margin);
                         canvas.DrawRect(rect, borderPaint);
 
+                        // Top text "level <N>"
+                        DrawTopText(canvas, $"level {level}", tile, textPaint);
+
                         // Centered text "<x>_<y>"
-                        string label = $"{x}_{y}";
-                        DrawCenteredText(canvas, label, tile, textPaint);
+                        DrawCenteredText(canvas, $"{x}_{y}", tile, textPaint);
 
                         using SKImage image = surface.Snapshot();
                         using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
@@ -191,6 +193,26 @@ namespace VirtualTextureReferenceSet
                     canvas.DrawRect(rect, paint);
                 }
             }
+        }
+        private static void DrawTopText(SKCanvas canvas, string text, int tileWidth, SKPaint paint)
+        {
+            // Fit text to width with a small margin
+            float targetWidth = tileWidth * 0.86f;
+
+            // Find a typeface that is italic; Since no family name is specified, SkiaSharp will use the system's default font
+            SKTypeface italicTypeface = SKFontManager.Default.MatchFamily(null, SKFontStyle.Italic);
+            SKFont font = new(italicTypeface, size: tileWidth * 0.1f);
+            float measured = font.MeasureText(text);
+            if (measured > 0f)
+            {
+                float scale = Math.Min(1f, targetWidth / measured);
+                font.Size *= scale;
+            }
+
+            // Just pick somwhere atop
+            float baseline = tileWidth * 0.2f;
+            float centerX = tileWidth * 0.5f;
+            canvas.DrawText(text, centerX, baseline, SKTextAlign.Center, font, paint);
         }
         private static void DrawCenteredText(SKCanvas canvas, string text, int tile, SKPaint paint)
         {
