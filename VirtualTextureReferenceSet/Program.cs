@@ -4,6 +4,7 @@ namespace VirtualTextureReferenceSet
 {
     internal class Program
     {
+        #region Configurations
         private const string AppName = "VirtualTextureReferenceSet";
         private const string AppVersion = "0.0.1";
 
@@ -24,7 +25,9 @@ namespace VirtualTextureReferenceSet
             SKColors.SaddleBrown,
             SKColors.DarkViolet
         ];
+        #endregion
 
+        #region Entry
         public static int Main(string[] args)
         {
             if (args.Length == 0 || args.Contains("--help", StringComparer.OrdinalIgnoreCase) || args.Contains("-h"))
@@ -40,7 +43,7 @@ namespace VirtualTextureReferenceSet
 
             try
             {
-                var (outputRoot, tile, maxLevel) = ParseArgs(args);
+                (string outputRoot, int tile, int maxLevel) = ParseArgs(args);
 
                 if (maxLevel < 0 || maxLevel > 12)
                     throw new ArgumentException("Levels must be between 0 and 12 inclusive.");
@@ -59,21 +62,21 @@ namespace VirtualTextureReferenceSet
                     long tilesY = 1L << level;       // 2^N
                     Console.WriteLine($"Level {level}: generating {tilesX * tilesY} tiles in {levelDir}");
 
-                    var color = LevelColors[level % LevelColors.Length];
+                    SKColor color = LevelColors[level % LevelColors.Length];
 
                     // Parallel generation
                     Parallel.For(0L, tilesX, x =>
                     {
-                        using var textPaint = MakeTextPaint(tile, color);
-                        using var borderPaint = MakeBorderPaint(tile, color);
-                        using var bgPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+                        using SKPaint textPaint = MakeTextPaint(tile, color);
+                        using SKPaint borderPaint = MakeBorderPaint(tile, color);
+                        using SKPaint bgPaint = new() { Color = SKColors.White, IsAntialias = true };
 
                         for (long y = 0; y < tilesY; y++)
                         {
                             string file = Path.Combine(levelDir, $"tx_{x}_{y}.png");
 
-                            using var surface = SKSurface.Create(new SKImageInfo(tile, tile, SKColorType.Rgba8888, SKAlphaType.Premul));
-                            var canvas = surface.Canvas;
+                            using SKSurface surface = SKSurface.Create(new SKImageInfo(tile, tile, SKColorType.Rgba8888, SKAlphaType.Premul));
+                            SKCanvas canvas = surface.Canvas;
                             canvas.Clear(SKColors.White);
 
                             // Draw background (already white). Keep for clarity if white ever changes.
@@ -81,16 +84,16 @@ namespace VirtualTextureReferenceSet
 
                             // Thick colored border
                             float margin = tile * 0.04f; // inner offset from the outermost edge
-                            var rect = new SKRect(margin, margin, tile - margin, tile - margin);
+                            SKRect rect = new(margin, margin, tile - margin, tile - margin);
                             canvas.DrawRect(rect, borderPaint);
 
                             // Centered text "<x>_<y>"
                             string label = $"{x}_{y}";
                             DrawCenteredText(canvas, label, tile, textPaint);
 
-                            using var image = surface.Snapshot();
-                            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-                            using var fs = File.Open(file, FileMode.Create, FileAccess.Write, FileShare.None);
+                            using SKImage image = surface.Snapshot();
+                            using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+                            using FileStream fs = File.Open(file, FileMode.Create, FileAccess.Write, FileShare.None);
                             data.SaveTo(fs);
                         }
                     });
@@ -108,7 +111,101 @@ namespace VirtualTextureReferenceSet
                 return 1;
             }
         }
+        #endregion
 
+
+        #region Routines
+        private static void PrintHelp()
+        {
+            Console.WriteLine($"""
+                {AppName} {AppVersion}
+                Generate virtual-texture reference tiles with SkiaSharp and write .ctx and .ssc sidecars.
+                
+                Usage:
+                  {AppName} <outputFolder> [--tile <int>] [--levels <0-12>]
+                  {AppName} --help
+                  {AppName} --version
+                
+                Arguments:
+                  <outputFolder>           Root folder for output. Subfolders level<N> are created.
+                
+                Options:
+                  --tile <int>             Tile resolution (square). Default 512.
+                  --levels <0-12>          Highest level to generate. Generates level0..levelN. Default 0.
+                  --help, -h               Show help.
+                  --version, -v            Show version.
+                
+                Outputs:
+                  level<N>/tx_<x>_<y>.png  White background, thick colored border, centered text "<x>_<y>".
+                  <FolderName>.ctx         Next to the output folder. Points ImageDirectory to <FolderName>.
+                  <FolderName>.ssc         Next to the output folder. References the .ctx.
+                Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.
+                """);
+        }
+        private static void DrawCenteredText(SKCanvas canvas, string text, int tile, SKPaint paint)
+        {
+            // Fit text to width with a small margin
+            float targetWidth = tile * 0.86f;
+
+            float measured = paint.MeasureText(text);
+            if (measured > 0f)
+            {
+                float scale = Math.Min(1f, targetWidth / measured);
+                paint.TextSize *= scale;
+            }
+
+            // Vertical centering using font metrics
+            SKFontMetrics metrics = paint.FontMetrics;
+            // Baseline such that the center of text's bounds aligns with tile/2
+            float textHeight = metrics.Descent - metrics.Ascent;
+            float centerY = tile * 0.5f;
+            float baseline = centerY - (metrics.Ascent + textHeight / 2f);
+
+            float centerX = tile * 0.5f;
+            canvas.DrawText(text, centerX, baseline, paint);
+        }
+
+        private static void WriteSidecarFiles(string outputRoot, int tile)
+        {
+            // Determine sibling file locations: same parent as the output directory
+            string parentDir = Directory.GetParent(outputRoot)?.FullName
+                               ?? throw new InvalidOperationException("cannot resolve parent directory");
+            string folderName = Path.GetFileName(outputRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+            string ctxPath = Path.Combine(parentDir, $"{folderName}.ctx");
+            string sscPath = Path.Combine(parentDir, $"{folderName}.ssc");
+
+            // .ctx content
+            string ctx = $$"""
+                VirtualTexture{{Environment.NewLine}}
+                {
+                    ImageDirectory "{{folderName}}"
+                    BaseSplit 0
+                    TileSize {{tile}}
+                    TileType "png"
+                }
+                """;
+
+            // .ssc content (exact strings per your template)
+            string ssc = $$"""
+                AltSurface "{{folderName}}" "Parent/Child"
+                {
+                    Texture "{{folderName}}.ctx"
+                }
+                """;
+
+            File.WriteAllText(ctxPath, ctx);
+            File.WriteAllText(sscPath, ssc);
+
+            Console.WriteLine($"""
+                Wrote:
+                  {ctxPath}
+                  {sscPath}
+                """);
+        }
+        #endregion
+
+        #region Helpers
         private static (string outputRoot, int tile, int levels) ParseArgs(string[] args)
         {
             string? outputRoot = null;
@@ -117,7 +214,7 @@ namespace VirtualTextureReferenceSet
 
             for (int i = 0; i < args.Length; i++)
             {
-                var a = args[i];
+                string a = args[i];
 
                 if (a == "--tile" && i + 1 < args.Length)
                 {
@@ -143,33 +240,6 @@ namespace VirtualTextureReferenceSet
 
             return (Path.GetFullPath(outputRoot), tile, levels);
         }
-
-        private static void PrintHelp()
-        {
-            Console.WriteLine($@"{AppName} {AppVersion}
-Generate virtual-texture reference tiles with SkiaSharp and write .ctx and .ssc sidecars.
-
-Usage:
-  {AppName} <outputFolder> [--tile <int>] [--levels <0-12>]
-  {AppName} --help
-  {AppName} --version
-
-Arguments:
-  <outputFolder>           Root folder for output. Subfolders level<N> are created.
-
-Options:
-  --tile <int>             Tile resolution (square). Default 512.
-  --levels <0-12>          Highest level to generate. Generates level0..levelN. Default 0.
-  --help, -h               Show help.
-  --version, -v            Show version.
-
-Outputs:
-  level<N>/tx_<x>_<y>.png  White background, thick colored border, centered text ""<x>_<y>"".
-  <FolderName>.ctx         Next to the output folder. Points ImageDirectory to <FolderName>.
-  <FolderName>.ssc         Next to the output folder. References the .ctx.
-Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.");
-        }
-
         private static SKPaint MakeBorderPaint(int tile, SKColor color)
         {
             return new SKPaint
@@ -181,12 +251,11 @@ Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.");
                 StrokeJoin = SKStrokeJoin.Miter
             };
         }
-
         private static SKPaint MakeTextPaint(int tile, SKColor color)
         {
             // Start with a size proportional to tile. Adjust below to fit.
             float baseSize = tile * 0.28f;
-            var paint = new SKPaint
+            SKPaint paint = new()
             {
                 IsAntialias = true,
                 Color = color,
@@ -196,67 +265,12 @@ Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.");
 
             // Choose a platform-safe typeface if available, else default.
             // SkiaSharp will fallback gracefully.
-            var tf = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
+            SKTypeface tf = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
             paint.Typeface = tf;
 
             paint.TextSize = baseSize;
             return paint;
         }
-
-        private static void DrawCenteredText(SKCanvas canvas, string text, int tile, SKPaint paint)
-        {
-            // Fit text to width with a small margin
-            float targetWidth = tile * 0.86f;
-
-            float measured = paint.MeasureText(text);
-            if (measured > 0f)
-            {
-                float scale = Math.Min(1f, targetWidth / measured);
-                paint.TextSize *= scale;
-            }
-
-            // Vertical centering using font metrics
-            var metrics = paint.FontMetrics;
-            // Baseline such that the center of text's bounds aligns with tile/2
-            float textHeight = metrics.Descent - metrics.Ascent;
-            float centerY = tile * 0.5f;
-            float baseline = centerY - (metrics.Ascent + textHeight / 2f);
-
-            float centerX = tile * 0.5f;
-            canvas.DrawText(text, centerX, baseline, paint);
-        }
-
-        private static void WriteSidecarFiles(string outputRoot, int tile)
-        {
-            // Determine sibling file locations: same parent as the output directory
-            string parentDir = Directory.GetParent(outputRoot)?.FullName
-                               ?? throw new InvalidOperationException("cannot resolve parent directory");
-            string folderName = Path.GetFileName(outputRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-
-            string ctxPath = Path.Combine(parentDir, $"{folderName}.ctx");
-            string sscPath = Path.Combine(parentDir, $"{folderName}.ssc");
-
-            // .ctx content
-            string ctx = $"VirtualTexture{Environment.NewLine}" +
-                         $"{{{Environment.NewLine}" +
-                         $"        ImageDirectory \"{folderName}\"{Environment.NewLine}" +
-                         $"        BaseSplit 0{Environment.NewLine}" +
-                         $"        TileSize {tile}{Environment.NewLine}" +
-                         $"        TileType \"png\"{Environment.NewLine}" +
-                         $"}}{Environment.NewLine}";
-
-            // .ssc content (exact strings per your template)
-            string ssc = $"AltSurface \"{folderName}\" \"Parent/Child\"{Environment.NewLine}" +
-                         $"{{{Environment.NewLine}" +
-                         $"    Texture \"{folderName}.ctx\"{Environment.NewLine}" +
-                         $"}}{Environment.NewLine}";
-
-            File.WriteAllText(ctxPath, ctx);
-            File.WriteAllText(sscPath, ssc);
-
-            Console.WriteLine($@"Wrote:
-  {ctxPath}
-  {sscPath}");
-        }
+        #endregion
     }
 }
