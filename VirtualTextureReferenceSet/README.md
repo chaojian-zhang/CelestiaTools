@@ -1,8 +1,11 @@
 ﻿# VirtualTextureReferenceSet
 
+Version: 0.0.1
+
 A command-line tool that generates **reference virtual texture tiles** using **SkiaSharp** for visualization and testing of texture paging systems.  
 Each texture level contains a grid of numbered tiles with colored borders and a centered `<x>_<y>` label.  
-The program also generates configuration files (`.ctx` and `.ssc`) describing the virtual texture set.
+The program also generates configuration files (`.ctx` and `.ssc`) describing the virtual texture set.  
+Output are lossless PNG.
 
 ## Features
 
@@ -53,24 +56,25 @@ VirtualTextureReferenceSet --version
 
 * Each tile has a **white background**, **thick colored border**, and **centered coordinate label**.
 * Level `N` contains:
-
   * `x ∈ [0, 2^(N+1)−1]`
   * `y ∈ [0, 2^N−1]`
   * Total tiles = `2^(2N+1)`
 
-## Generated Sidecar Files
+## Generated Configuration Files
 
-Located next to the output folder (same parent directory):
+Those are located next to the output folder (same parent directory).
+
+In practice, you would put the ctx along with the output folder into `textures/hires`, while the `.ssc` into "extras" folder as an add-on.
 
 ### `<FolderName>.ctx`
 
 ```text
 VirtualTexture
 {
-        ImageDirectory "<FolderName>"
-        BaseSplit 0
-        TileSize <TileResolution>
-        TileType "png"
+    ImageDirectory "<FolderName>"
+    BaseSplit 0
+    TileSize <TileResolution>
+    TileType "png"
 }
 ```
 
@@ -88,22 +92,11 @@ AltSurface "<FolderName>" "Parent/Child"
 Requires [.NET 8 SDK](https://dotnet.microsoft.com/download) and [SkiaSharp](https://www.nuget.org/packages/SkiaSharp).
 
 ```bash
-dotnet new console -n VirtualTextureReferenceSet
+git clone https://github.com/chaojian-zhang/CelestiaTools.git
 cd VirtualTextureReferenceSet
-dotnet add package SkiaSharp
-# Replace Program.cs with this source
 dotnet build
 dotnet run -- ./Output --tile 512 --levels 3
 ```
-
-## Technical Overview
-
-* **Language:** C# (.NET 8)
-* **Graphics:** SkiaSharp (`SKSurface`, `SKCanvas`)
-* **Concurrency:** `Parallel.For` for parallel tile generation
-* **Color Palette:** 13 distinct level colors
-* **Output Format:** PNG (lossless)
-* **Design:** No external dependencies beyond SkiaSharp
 
 ## License
 
