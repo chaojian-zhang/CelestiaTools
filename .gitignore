@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Launch settings
 launchSettings.json
+
+# IDE
+.vscode
