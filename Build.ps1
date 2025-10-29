@@ -28,8 +28,8 @@ $PublishExecutables = @(
     "CelestiaStarDatabaseConverter\CelestiaStarDatabaseConverter.csproj"
     "VirtualTextureReferenceSet\VirtualTextureReferenceSet.csproj"
 )
-foreach ($Item in $PublishExecutables) {
-    dotnet publish $PSScriptRoot\..\$Item --use-current-runtime --self-contained --output $PublishFolder
+foreach ($item in $PublishExecutables) {
+    dotnet publish $PSScriptRoot\$item --use-current-runtime --self-contained --output $PublishFolder
 }
 
 # Delete all PDB files from the $PublishFolder
@@ -63,7 +63,7 @@ $rid = "${os}-${arch}" # Runtime name, e.g. "Win-x64"
 $version = "v0.0.1"
 # Create archive
 $Date = Get-Date -Format yyyyMMdd
-$ArchiveFolder = "$PublishFolder\Packages"
+$ArchiveFolder = "$PSScriptRoot\Packages"
 $ArchivePath = "$ArchiveFolder\Celestia_Tools_${version}_${rid}_B$Date.zip"
 New-Item -ItemType Directory -Force -Path $ArchiveFolder
 Compress-Archive -Path $PublishFolder\* -DestinationPath $ArchivePath -Force
