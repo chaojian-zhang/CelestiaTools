@@ -70,6 +70,7 @@ namespace VirtualTextureReferenceSet
                         using SKPaint textPaint = MakeTextPaint(tile, color);
                         using SKPaint borderPaint = MakeBorderPaint(tile, color);
                         using SKPaint bgPaint = new() { Color = SKColors.White, IsAntialias = true };
+                        bool drawCheckerboard = true;
 
                         for (long y = 0; y < tilesY; y++)
                         {
@@ -79,8 +80,11 @@ namespace VirtualTextureReferenceSet
                             SKCanvas canvas = surface.Canvas;
                             canvas.Clear(SKColors.White);
 
-                            // Draw background (already white). Keep for clarity if white ever changes.
-                            canvas.DrawRect(new SKRect(0, 0, tile, tile), bgPaint);
+                            // Draw background
+                            if (drawCheckerboard)
+                                DrawCheckerboard(canvas, tile, grid: 8, gray: 0xDD); // 0xD0–0xE0 is a good dim range
+                            else
+                                canvas.DrawRect(new SKRect(0, 0, tile, tile), bgPaint); // Draw pure white background; Not strictly necessary but kept for clarity
 
                             // Thick colored border
                             float margin = tile * 0.04f; // inner offset from the outermost edge
@@ -141,6 +145,38 @@ namespace VirtualTextureReferenceSet
                   <FolderName>.ssc         Next to the output folder. References the .ctx.
                 Counts: level N has x in [0, 2^(N+1)-1], y in [0, 2^N-1] => 2^(2N+1) tiles.
                 """);
+        }
+        private static void DrawCheckerboard(SKCanvas canvas, int tile, int grid = 8, byte gray = 0xDD)
+        {
+            // grid = number of cells per side. 8 gives 64 cells total.
+            float cell = tile / (float)grid;
+
+            using var paint = new SKPaint
+            {
+                IsAntialias = false,
+                Color = new SKColor(gray, gray, gray), // dim gray cells
+                Style = SKPaintStyle.Fill
+            };
+
+            // Draw only the gray cells; white cells are the background.
+            for (int y = 0; y < grid; y++)
+            {
+                float top = y * cell;
+                float bottom = (y + 1) * cell;
+
+                // Start parity alternates per row.
+                int start = (y & 1) == 0 ? 1 : 0;
+
+                for (int x = start; x < grid; x += 2)
+                {
+                    float left = x * cell;
+                    float right = (x + 1) * cell;
+
+                    // Use integer-aligned rects to avoid seams on exact divisors.
+                    var rect = SKRectI.Ceiling(new SKRect(left, top, right, bottom));
+                    canvas.DrawRect(rect, paint);
+                }
+            }
         }
         private static void DrawCenteredText(SKCanvas canvas, string text, int tile, SKPaint paint)
         {
