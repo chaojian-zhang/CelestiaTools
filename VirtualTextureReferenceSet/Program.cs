@@ -213,7 +213,7 @@ namespace VirtualTextureReferenceSet
 
             // .ctx content
             string ctx = $$"""
-                VirtualTexture{{Environment.NewLine}}
+                VirtualTexture
                 {
                     ImageDirectory "{{folderName}}"
                     BaseSplit 0
