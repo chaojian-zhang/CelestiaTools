@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using System.Collections.Frozen;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -11,10 +12,11 @@ namespace VirtualTexturePreviewPicker
     {
         #region States
         private readonly RenderSurface _surface;
+
         private int _splitLevel = 0;
         private string? _filePath;
         private readonly Brush[] _levelBrushes;
-        private readonly Pen _gridPen;
+        private readonly Pen[] _gridPens;
         #endregion
 
         public MainWindow()
@@ -44,8 +46,9 @@ namespace VirtualTexturePreviewPicker
                 Brushes.DarkViolet
             ];
 
-            _gridPen = new Pen(Brushes.Gray, 1.0);
-            _gridPen.Freeze();
+            _gridPens = [.. _levelBrushes.Select(b => new Pen(b, 4.0))];
+            foreach (Pen pen in _gridPens)
+                pen.Freeze();
 
             // Create the drawing surface
             _surface = new RenderSurface
@@ -53,8 +56,10 @@ namespace VirtualTexturePreviewPicker
                 Focusable = true,
                 Bitmap = null,
                 SplitLevel = _splitLevel,
-                GridPen = _gridPen,
-                LevelBrushes = _levelBrushes
+                GridPens = _gridPens,
+                LevelBrushes = _levelBrushes,
+                UserScale = 1.0,
+                UserOffset = new System.Windows.Vector(0, 0)
             };
 
             // Make the surface fill the window
@@ -98,6 +103,11 @@ namespace VirtualTexturePreviewPicker
                     bmp.Freeze(); // make cross thread safe and faster
 
                     _surface.Bitmap = bmp;
+
+                    // Reset zoom when new image loads
+                    _surface.UserScale = 1.0;
+                    _surface.UserOffset = new System.Windows.Vector(0, 0);
+
                     _surface.InvalidateVisual();
 
                     UpdateTitleWithImageInfo();
@@ -150,9 +160,28 @@ namespace VirtualTexturePreviewPicker
         }
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            // standard: positive = up
-            ChangeSplitLevel(e.Delta > 0 ? +1 : -1);
-            e.Handled = true;
+            bool ctrlDown = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+            if (ctrlDown)
+            {
+                // zoom
+                // positive delta = zoom in
+                double step = e.Delta > 0 ? 1.25 : 0.8; // multiplicative
+                // get cursor position relative to the RenderSurface
+                Point pos = e.GetPosition(_surface);
+
+                _surface.ZoomAt(pos, step);
+
+                UpdateTitleWithImageInfo();
+
+                e.Handled = true;
+            }
+            else
+            {
+                // change split level
+                ChangeSplitLevel(e.Delta > 0 ? +1 : -1);
+                e.Handled = true;
+            }
         }
         #endregion
 
@@ -175,9 +204,9 @@ namespace VirtualTexturePreviewPicker
         private void UpdateTitleWithImageInfo()
         {
             if (_surface.Bitmap != null)
-                Title = $"Split Level: {_splitLevel} | {System.IO.Path.GetFileName(_filePath)} ({_surface.Bitmap.PixelWidth}x{_surface.Bitmap.PixelHeight})";
+                Title = $"Split Level: {_splitLevel} | {System.IO.Path.GetFileName(_filePath)} ({_surface.Bitmap.PixelWidth}x{_surface.Bitmap.PixelHeight}) | Zoom {Math.Round(_surface.UserScale, 2)}x";
             else
-                Title = $"Split Level: {_splitLevel}";
+                Title = $"Split Level: {_splitLevel} | Zoom {Math.Round(_surface.UserScale, 2)}x";
         }
         #endregion
     }

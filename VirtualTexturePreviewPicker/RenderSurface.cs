@@ -9,14 +9,16 @@ namespace VirtualTexturePreviewPicker
         #region States
         public BitmapSource Bitmap;
         public int SplitLevel;
-        public Pen GridPen;
+        public Pen[] GridPens;
         public Brush[] LevelBrushes;
-        #endregion
 
-        #region Properties
-        // These properties are computed in OnRender and also needed by title update
-        public double ImgPixelW;
-        public double ImgPixelH;
+        // Zoom state
+        public double UserScale = 1.0;          // 1.0 = no extra zoom
+        public Vector UserOffset = new(0, 0); // pan in screen pixels
+
+        // Internal cached fit info
+        private double _baseScale = 1.0;
+        private Point _baseOrigin = new(0, 0); // top-left of fitted image with no zoom/pan
         #endregion
 
         #region Events
@@ -24,112 +26,107 @@ namespace VirtualTexturePreviewPicker
         {
             base.OnRender(dc);
 
-            double winW = ActualWidth;
-            double winH = ActualHeight;
+            double viewW = ActualWidth;
+            double viewH = ActualHeight;
 
             // Background
-            dc.DrawRectangle(Brushes.Black, null, new Rect(0, 0, winW, winH));
+            dc.DrawRectangle(Brushes.Black, null, new Rect(0, 0, viewW, viewH));
 
             if (Bitmap == null) 
                 return;
 
             double imgW = Bitmap.PixelWidth;
             double imgH = Bitmap.PixelHeight;
-            ImgPixelW = imgW;
-            ImgPixelH = imgH;
-
-            if (imgW <= 0 || imgH <= 0) 
+            if (imgW <= 0 || imgH <= 0)
                 return;
 
-            double scaleX = winW / imgW;
-            double scaleY = winH / imgH;
-            double scale = Math.Min(scaleX, scaleY);
+            // Compute base fit to window (no zoom)
+            double fitScaleX = viewW / imgW;
+            double fitScaleY = viewH / imgH;
+            _baseScale = Math.Min(fitScaleX, fitScaleY);
 
-            double drawW = imgW * scale;
-            double drawH = imgH * scale;
+            double baseDrawW = imgW * _baseScale;
+            double baseDrawH = imgH * _baseScale;
 
-            double offX = (winW - drawW) * 0.5;
-            double offY = (winH - drawH) * 0.5;
+            _baseOrigin = new Point(
+                (viewW - baseDrawW) * 0.5,
+                (viewH - baseDrawH) * 0.5
+            );
 
-            Rect imgRect = new(offX, offY, drawW, drawH);
+            // Final effective scale
+            double effScale = _baseScale * UserScale;
+
+            // Destination rect after zoom and pan
+            Rect imgRect = new(
+                _baseOrigin.X + UserOffset.X,
+                _baseOrigin.Y + UserOffset.Y,
+                imgW * effScale,
+                imgH * effScale
+            );
 
             // Draw image
             dc.DrawImage(Bitmap, imgRect);
 
-            // Grid math
-            int cols = 1 << (SplitLevel + 1); // 2^(N+1)
-            int rows = 1 << SplitLevel;       // 2^N
-
-            double cellW = drawW / cols;
-            double cellH = drawH / rows;
-
-            // Grid lines
-            DrawGridLines(dc, offX, offY, cols, rows, cellW, cellH);
-
-            // Labels
-            DrawCellLabels(dc, offX, offY, cols, rows, cellW, cellH);
+            // Grid math using effScale and origin+offset
+            DrawGridAndLabels(dc, imgW, imgH, effScale);
         }
         #endregion
 
         #region Routines
-        private void DrawGridLines(
-            DrawingContext dc,
-            double offX,
-            double offY,
-            int cols,
-            int rows,
-            double cellW,
-            double cellH)
+        private void DrawGridAndLabels(DrawingContext dc, double imgW, double imgH, double effScale)
         {
-            if (GridPen == null) 
-                return;
+            // Cols and rows
+            int cols = 1 << (SplitLevel + 1); // 2^(N+1)
+            int rows = 1 << SplitLevel;       // 2^N
 
-            // Verticals
-            for (int c = 0; c <= cols; c++)
+            // Per-cell size in image pixels
+            double cellImgW = imgW / cols;
+            double cellImgH = imgH / rows;
+
+            // Convert helper: image pixel -> screen point
+            Point ImgToScreen(double px, double py)
             {
-                double x = offX + c * cellW;
-                dc.DrawLine(GridPen,
-                    new Point(x, offY),
-                    new Point(x, offY + rows * cellH));
+                return new Point(
+                    _baseOrigin.X + UserOffset.X + px * effScale,
+                    _baseOrigin.Y + UserOffset.Y + py * effScale
+                );
             }
 
-            // Horizontals
-            for (int r = 0; r <= rows; r++)
+            // Draw grid lines
+            if (GridPens != null)
             {
-                double y = offY + r * cellH;
-                dc.DrawLine(GridPen,
-                    new Point(offX, y),
-                    new Point(offX + cols * cellW, y));
+                Pen gridPen = GridPens[Math.Min(Math.Max(SplitLevel, 0), LevelBrushes.Length - 1)];
+
+                // Verticals
+                for (int c = 0; c <= cols; c++)
+                {
+                    double xImg = c * cellImgW;
+                    Point p1 = ImgToScreen(xImg, 0);
+                    Point p2 = ImgToScreen(xImg, imgH);
+                    dc.DrawLine(gridPen, p1, p2);
+                }
+
+                // Horizontals
+                for (int r = 0; r <= rows; r++)
+                {
+                    double yImg = r * cellImgH;
+                    Point p1 = ImgToScreen(0, yImg);
+                    Point p2 = ImgToScreen(imgW, yImg);
+                    dc.DrawLine(gridPen, p1, p2);
+                }
             }
-        }
-        private void DrawCellLabels(
-            DrawingContext dc,
-            double offX,
-            double offY,
-            int cols,
-            int rows,
-            double cellW,
-            double cellH)
-        {
-            if (LevelBrushes == null || LevelBrushes.Length == 0) 
-                return;
 
             // Performance clamp:
             // Only render text if total cells <= 4096 (64x64)
             // This triggers for splitLevel <= 5.
             long totalCells = (long)cols * (long)rows;
-            bool drawLabels = totalCells <= 4096; // perf guard
+            bool drawLabels = totalCells <= 4096;
 
-            if (!drawLabels) 
+            // Labels
+            if (!drawLabels || LevelBrushes == null || LevelBrushes.Length == 0)
                 return;
 
-            Brush textBrush = LevelBrushes[
-                Math.Min(Math.Max(SplitLevel, 0), LevelBrushes.Length - 1)
-            ];
-
-            // Font size roughly 12 scaled with cell size but not tiny;
-            // Choose size proportional to min(cellW, cellH)
-            double baseSize = Math.Max(10.0, Math.Min(cellW, cellH) * 0.33);
+            Brush textBrush = LevelBrushes[Math.Min(Math.Max(SplitLevel, 0), LevelBrushes.Length - 1)];
 
             for (int y = 0; y < rows; y++)
             {
@@ -137,17 +134,63 @@ namespace VirtualTexturePreviewPicker
                 {
                     string label = $"{x}, {y}";
 
+                    // Cell center in image pixel coords
+                    double cxImg = (x + 0.5) * cellImgW;
+                    double cyImg = (y + 0.5) * cellImgH;
+
+                    // Map to screen
+                    Point centerScreen = ImgToScreen(cxImg, cyImg);
+
+                    // Choose font size: scale with effScale and cell size
+                    double cellScreenW = cellImgW * effScale;
+                    double cellScreenH = cellImgH * effScale;
+                    // Choose size proportional to min(cellW, cellH)
+                    double baseSize = Math.Max(10.0, Math.Min(cellScreenW, cellScreenH) * 0.33);
+
                     FormattedText ft = CreateFormattedText(label, textBrush, baseSize);
 
-                    double cellLeft = offX + x * cellW;
-                    double cellTop = offY + y * cellH;
-
-                    double textX = cellLeft + (cellW - ft.Width) * 0.5;
-                    double textY = cellTop + (cellH - ft.Height) * 0.5;
+                    double textX = centerScreen.X - ft.Width * 0.5;
+                    double textY = centerScreen.Y - ft.Height * 0.5;
 
                     dc.DrawText(ft, new Point(textX, textY));
                 }
             }
+        }
+        #endregion
+
+        #region Methods
+        /// <summary>
+        /// Public zoom API called by MainWindow
+        /// </summary>
+        public void ZoomAt(Point screenPos, double zoomFactor)
+        {
+            // Clamp future scale
+            double oldScale = UserScale;
+            double newScale = oldScale * zoomFactor;
+            if (newScale < 0.05) newScale = 0.05;
+            if (newScale > 64.0) newScale = 64.0;
+
+            // Get current state numbers we need
+            double effScaleOld = _baseScale * oldScale;
+
+            // Solve for image pixel under cursor before zoom
+            // Pimg = (Scursor - baseOrigin - UserOffset) / effScaleOld
+            Vector vCursorOld = (Vector)screenPos;
+            Vector vBaseOrigin = (Vector)_baseOrigin;
+            Vector numer = vCursorOld - vBaseOrigin - UserOffset;
+            double px = numer.X / effScaleOld;
+            double py = numer.Y / effScaleOld;
+
+            // Compute new offset to keep that same image pixel under the cursor
+            double effScaleNew = _baseScale * newScale;
+
+            // UserOffset_new = Scursor - baseOrigin - effScaleNew * Pimg
+            Vector newOffset = vCursorOld - vBaseOrigin - new Vector(px * effScaleNew, py * effScaleNew);
+
+            UserScale = newScale;
+            UserOffset = newOffset;
+
+            InvalidateVisual();
         }
         #endregion
 
