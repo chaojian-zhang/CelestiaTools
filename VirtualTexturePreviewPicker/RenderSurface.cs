@@ -20,6 +20,17 @@ namespace VirtualTexturePreviewPicker
         // Internal cached fit info
         private double _baseScale = 1.0;
         private Point _baseOrigin = new(0, 0); // top-left of fitted image with no zoom/pan
+
+        public double _dim = 0.47;
+        public double Dim
+        {
+            get => _dim;
+            set 
+            {
+                // Clamp to 0-1
+                _dim = Math.Min(Math.Max(value, 0), 1);
+            }
+        }
         #endregion
 
         #region Events
@@ -69,7 +80,7 @@ namespace VirtualTexturePreviewPicker
             dc.DrawImage(Bitmap, imgRect);
 
             // Dim the background image
-            SolidColorBrush overlayBrush = new SolidColorBrush(Color.FromArgb(120, 0, 0, 0)); // 120≈47% black overlay
+            SolidColorBrush overlayBrush = new SolidColorBrush(Color.FromArgb((byte)(_dim * byte.MaxValue), 0, 0, 0)); // 120≈47% black overlay
             dc.DrawRectangle(overlayBrush, null, imgRect);
 
             // Grid math using effScale and origin+offset

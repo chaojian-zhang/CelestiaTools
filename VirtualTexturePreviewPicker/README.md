@@ -13,12 +13,13 @@ Run the program, load an image, adjust split level, zoom in, and right-click a c
 * Image Load: `Ctrl + O` or double-click to open an image.
 * Split Level Control:
   * Range **0–12**
-  * Change using ↑/↓, `W`/`S`, PageUp/PageDown, +/-, or mouse wheel.
+  * Change using ↑/↓, `W`/`S`, PageUp/PageDown, or mouse wheel.
   * Window title shows current level.
 * Grid Overlay:
   * Level *N* divides image into `2^(N+1)` × `2^N` cells.
   * Each cell labeled with its `(x, y)` coordinate.
   * 13 distinct label colors by level.
+  * Control background dim using +/-.
 * Zoom & Pan:
   * `Ctrl + Mouse Wheel` zooms toward cursor.
   * `F` recenters the image (resets zoom).

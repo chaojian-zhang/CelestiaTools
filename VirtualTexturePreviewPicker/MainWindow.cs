@@ -198,7 +198,6 @@ namespace VirtualTexturePreviewPicker
             {
                 // Up controls
                 case Key.Up:
-                case Key.OemPlus:
                 case Key.W:
                 case Key.PageUp:
                     ChangeSplitLevel(+1);
@@ -207,10 +206,23 @@ namespace VirtualTexturePreviewPicker
 
                 // Down controls
                 case Key.Down:
-                case Key.OemMinus:
                 case Key.S:
                 case Key.PageDown:
                     ChangeSplitLevel(-1);
+                    e.Handled = true;
+                    break;
+
+                // Dim control
+                case Key.Add:
+                case Key.OemPlus:
+                    _surface.Dim += 0.1;
+                    _surface.InvalidateVisual();
+                    e.Handled = true;
+                    break;
+                case Key.Subtract:
+                case Key.OemMinus:
+                    _surface.Dim -= 0.1;
+                    _surface.InvalidateVisual();
                     e.Handled = true;
                     break;
 
