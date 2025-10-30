@@ -49,3 +49,7 @@ level<Level>_tx_<X>_<Y>.png
 ```
 
 Each corresponds to the exact cropped region from the source image into a `512x512` tile.
+
+## Changelog
+
+* v0.0.1: Initial implementation.

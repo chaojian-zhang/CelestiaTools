@@ -128,3 +128,7 @@ For `kind = 1` (white dwarf), it represents DA–DX types; ignored for neutron s
 ## License
 
 MIT
+
+## Changelog
+
+* v0.0.1: Initial implementation.

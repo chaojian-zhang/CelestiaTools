@@ -1,6 +1,6 @@
 ﻿# VirtualTextureReferenceSet
 
-Version: 0.0.1
+Version: 0.0.2
 
 A command-line tool that generates **reference virtual texture tiles** using **SkiaSharp** for visualization and testing of texture paging systems.  
 Each texture level contains a grid of numbered tiles with colored borders and a centered `<x>_<y>` label.  
@@ -103,3 +103,8 @@ dotnet run -- ./Output --tile 512 --levels 3
 MIT.
 
 Free for any purpose. Attribution appreciated but not required.
+
+## Changelog
+
+* v0.0.1: Initial implementation.
+* v0.0.2: Draw level text.

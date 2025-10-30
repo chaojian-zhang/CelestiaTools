@@ -6,7 +6,7 @@ namespace VirtualTextureReferenceSet
     {
         #region Configurations
         private const string AppName = "VirtualTextureReferenceSet";
-        private const string AppVersion = "0.0.1";
+        private const string AppVersion = "0.0.2";
 
         private static readonly SKColor[] LevelColors =
         [
