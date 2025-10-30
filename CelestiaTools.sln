@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CelestiaCMODConverter", "Ce
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CelestiaStarDatabaseConverter", "CelestiaStarDatabaseConverter\CelestiaStarDatabaseConverter.csproj", "{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtualTexturePreviewPicker", "VirtualTexturePreviewPicker\VirtualTexturePreviewPicker.csproj", "{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
