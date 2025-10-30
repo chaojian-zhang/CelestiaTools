@@ -6,8 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <Version>0.0.1</Version>
 
-      <StartupObject>VirtualTexturePreviewPicker.Program</StartupObject>
+    <StartupObject>VirtualTexturePreviewPicker.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
