@@ -156,6 +156,15 @@ namespace VirtualTexturePreviewPicker
                     ChangeSplitLevel(-1);
                     e.Handled = true;
                     break;
+
+                case Key.F:
+                    // Center frame (reset zoom + offset)
+                    _surface.UserScale = 1.0;
+                    _surface.UserOffset = new System.Windows.Vector(0, 0);
+                    _surface.InvalidateVisual();
+                    UpdateTitleWithImageInfo();
+                    e.Handled = true;
+                    break;
             }
         }
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
