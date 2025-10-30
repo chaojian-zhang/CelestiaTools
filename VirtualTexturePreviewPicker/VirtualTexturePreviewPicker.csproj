@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Version>0.0.1</Version>
+    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
 
     <StartupObject>VirtualTexturePreviewPicker.Program</StartupObject>
   </PropertyGroup>
