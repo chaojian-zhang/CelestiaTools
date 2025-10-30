@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using SkiaSharp;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -206,6 +207,74 @@ namespace VirtualTexturePreviewPicker
                 brush,
                 VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip
             );
+        }
+        public bool TryGetTileFromScreenPoint(Point screenPt, out int tileX, out int tileY, out int level, out SKRectI srcPixelRect)
+        {
+            tileX = 0;
+            tileY = 0;
+            level = SplitLevel;
+            srcPixelRect = SKRectI.Empty;
+
+            if (Bitmap == null)
+                return false;
+
+            // Image pixel size
+            double imgW = Bitmap.PixelWidth;
+            double imgH = Bitmap.PixelHeight;
+            if (imgW <= 0 || imgH <= 0)
+                return false;
+
+            // First, map screen point -> image pixel coordinates (Pimg)
+            // Recall mapping:
+            // screen = _baseOrigin + UserOffset + effScale * Pimg
+            // => Pimg = (screen - _baseOrigin - UserOffset) / effScale
+            double effScale = _baseScale * UserScale;
+
+            Vector vScreen = (Vector)screenPt;
+            Vector vBase = (Vector)_baseOrigin;
+            Vector rel = vScreen - vBase - UserOffset;
+            double px = rel.X / effScale;
+            double py = rel.Y / effScale;
+
+            // Outside image?
+            if (px < 0 || py < 0 || px >= imgW || py >= imgH)
+                return false;
+
+            // Compute cols/rows at this level
+            int cols = 1 << (SplitLevel + 1); // 2^(N+1)
+            int rows = 1 << SplitLevel;       // 2^N
+
+            // size of each cell in source pixels
+            double cellSrcW = imgW / cols;
+            double cellSrcH = imgH / rows;
+
+            // Which tile are we in?
+            int tx = (int)Math.Floor(px / cellSrcW);
+            int ty = (int)Math.Floor(py / cellSrcH);
+
+            // safety clamp
+            if (tx < 0) tx = 0;
+            if (ty < 0) ty = 0;
+            if (tx >= cols) tx = cols - 1;
+            if (ty >= rows) ty = rows - 1;
+
+            tileX = tx;
+            tileY = ty;
+
+            // Compute exact integer crop rect in source pixel coords.
+            // Match your reference ProcessFromSource logic:
+            // left/top floor, right/bottom ceiling
+            int l = (int)Math.Floor(tx * cellSrcW);
+            int t = (int)Math.Floor(ty * cellSrcH);
+            int r = (int)Math.Ceiling((tx + 1) * cellSrcW);
+            int b = (int)Math.Ceiling((ty + 1) * cellSrcH);
+
+            // build SKRectI
+            int w = Math.Max(1, r - l);
+            int h = Math.Max(1, b - t);
+            srcPixelRect = SKRectI.Create(l, t, w, h);
+
+            return true;
         }
         #endregion
     }

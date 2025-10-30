@@ -10,4 +10,8 @@
       <StartupObject>VirtualTexturePreviewPicker.Program</StartupObject>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+  </ItemGroup>
+
 </Project>

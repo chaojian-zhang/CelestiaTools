@@ -1,5 +1,5 @@
 ﻿using Microsoft.Win32;
-using System.Collections.Frozen;
+using SkiaSharp;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -69,6 +69,7 @@ namespace VirtualTexturePreviewPicker
             KeyDown += OnKeyDown;
             MouseWheel += OnMouseWheel;
             MouseDoubleClick += OnMouseDoubleClick;
+            MouseRightButtonDown += OnMouseRightButtonDown;
 
             // Re-render on size change
             SizeChanged += (_, __) => _surface.InvalidateVisual();
@@ -121,6 +122,62 @@ namespace VirtualTexturePreviewPicker
                         MessageBoxImage.Error);
                 }
             }
+        }
+        private void ExportTileToPng(int tileX, int tileY, int level, SKRectI srcRect)
+        {
+            // if we don't have a path we cannot export
+            if (string.IsNullOrEmpty(_filePath))
+                return;
+
+            const int TILE_SIZE = 512;
+
+            // Pick output path
+            SaveFileDialog dlg = new()
+            {
+                Title = "Save Tile",
+                Filter = "PNG Image|*.png",
+                FileName = $"level{level}_tx_{tileX}_{tileY}.png",
+                AddExtension = true,
+                DefaultExt = ".png",
+                OverwritePrompt = true
+            };
+
+            bool? ok = dlg.ShowDialog(this);
+            if (ok != true)
+                return;
+
+            string outPath = dlg.FileName;
+
+            // Load original image via SkiaSharp directly from disk
+            using SKBitmap fullBmp = SKBitmap.Decode(_filePath);
+            if (fullBmp == null)
+                return;
+
+            using SKImage fullImg = SKImage.FromBitmap(fullBmp);
+            // Safety clamp srcRect to source bounds in case of rounding edges
+            SKRectI clampedRect = ClampRectToImage(srcRect, fullImg.Width, fullImg.Height);
+
+            // Render cropped region into TILE_SIZE x TILE_SIZE
+            using SKSurface surface = SKSurface.Create(new SKImageInfo(TILE_SIZE, TILE_SIZE, SKColorType.Rgba8888, SKAlphaType.Premul));
+
+            SKCanvas canvas = surface.Canvas;
+            canvas.Clear(SKColors.Black);
+
+            using (SKPaint paint = new()
+            {
+                FilterQuality = SKFilterQuality.High,
+                IsAntialias = false
+            })
+            {
+                SKRect dstRect = new(0, 0, TILE_SIZE, TILE_SIZE);
+                canvas.DrawImage(fullImg, clampedRect, dstRect, paint);
+            }
+
+            // Encode to PNG
+            using SKImage tileImage = surface.Snapshot();
+            using SKData data = tileImage.Encode(SKEncodedImageFormat.Png, 100);
+            using FileStream fs = File.Open(outPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            data.SaveTo(fs);
         }
         #endregion
 
@@ -192,6 +249,24 @@ namespace VirtualTexturePreviewPicker
                 e.Handled = true;
             }
         }
+        private void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // get click position in surface space
+            Point p = e.GetPosition(_surface);
+
+            if (_surface.TryGetTileFromScreenPoint(
+                    p,
+                    out int tileX,
+                    out int tileY,
+                    out int level,
+                    out SKRectI srcRect))
+            {
+                // we have a tile. proceed to export
+                ExportTileToPng(tileX, tileY, level, srcRect);
+            }
+
+            e.Handled = true;
+        }
         #endregion
 
         #region Helpers
@@ -216,6 +291,18 @@ namespace VirtualTexturePreviewPicker
                 Title = $"Split Level: {_splitLevel} | {System.IO.Path.GetFileName(_filePath)} ({_surface.Bitmap.PixelWidth}x{_surface.Bitmap.PixelHeight}) | Zoom {Math.Round(_surface.UserScale, 2)}x";
             else
                 Title = $"Split Level: {_splitLevel} | Zoom {Math.Round(_surface.UserScale, 2)}x";
+        }
+        private static SKRectI ClampRectToImage(SKRectI r, int imgW, int imgH)
+        {
+            int l = Math.Max(0, r.Left);
+            int t = Math.Max(0, r.Top);
+            int rgt = Math.Min(imgW, r.Right);
+            int bot = Math.Min(imgH, r.Bottom);
+
+            if (rgt < l) rgt = l;
+            if (bot < t) bot = t;
+
+            return SKRectI.Create(l, t, Math.Max(1, rgt - l), Math.Max(1, bot - t));
         }
         #endregion
     }
