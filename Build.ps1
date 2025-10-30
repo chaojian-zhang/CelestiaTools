@@ -27,6 +27,7 @@ $PublishExecutables = @(
     "CelestiaCMODConverter\CelestiaCMODConverter.csproj"
     "CelestiaStarDatabaseConverter\CelestiaStarDatabaseConverter.csproj"
     "VirtualTextureReferenceSet\VirtualTextureReferenceSet.csproj"
+    "VirtualTexturePreviewPicker\VirtualTexturePreviewPicker.csproj"
 )
 foreach ($item in $PublishExecutables) {
     dotnet publish $PSScriptRoot\$item --use-current-runtime --self-contained --output $PublishFolder
@@ -49,6 +50,7 @@ $Executables = @(
     "CelestiaCMODConverter.exe"
     "CelestiaStarDatabaseConverter.exe"
     "VirtualTextureReferenceSet.exe"
+    "VirtualTexturePreviewPicker.exe"
 )
 foreach ($item in $Executables) {
     $exePath = Join-Path $PublishFolder $item
@@ -60,7 +62,7 @@ foreach ($item in $Executables) {
 
 # Pick RID
 $rid = "${os}-${arch}" # Runtime name, e.g. "Win-x64"
-$version = "v0.0.1"
+$version = "v0.0.2"
 # Create archive
 $Date = Get-Date -Format yyyyMMdd
 $ArchiveFolder = "$PSScriptRoot\Packages"
