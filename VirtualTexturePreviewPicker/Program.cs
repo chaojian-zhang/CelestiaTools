@@ -7,8 +7,8 @@ namespace VirtualTexturePreviewPicker
         [STAThread]
         public static void Main()
         {
+            // No XAML startup
             Application app = new();
-            // no XAML startup
             MainWindow win = new();
             app.Run(win);
         }

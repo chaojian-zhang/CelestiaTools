@@ -1,25 +1,21 @@
 ﻿using Microsoft.Win32;
 using System.IO;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace VirtualTexturePreviewPicker
 {
     public partial class MainWindow : Window
     {
+        #region Configurations
         private BitmapSource _bitmap;
         private int _splitLevel = 0;
 
         private readonly Brush[] _levelBrushes;
         private readonly Pen _gridPen;
+        #endregion
 
         public MainWindow()
         {
@@ -30,35 +26,40 @@ namespace VirtualTexturePreviewPicker
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             // define 13 distinct brushes (0..12)
-            _levelBrushes = new Brush[]
-            {
-                Brushes.White,
-                Brushes.Yellow,
-                Brushes.Lime,
-                Brushes.Cyan,
-                Brushes.Magenta,
-                Brushes.Orange,
-                Brushes.DeepSkyBlue,
-                Brushes.Chartreuse,
-                Brushes.Violet,
+            _levelBrushes =
+            [
+                // 13 distinct colors for levels 0..12
                 Brushes.Red,
-                Brushes.LightGreen,
-                Brushes.LightBlue,
-                Brushes.SandyBrown
-            };
+                Brushes.Blue,
+                Brushes.Green,
+                Brushes.Orange,
+                Brushes.Purple,
+                Brushes.Teal,
+                Brushes.Brown,
+                Brushes.Magenta,
+                Brushes.Goldenrod,
+                Brushes.Crimson,
+                Brushes.DarkCyan,
+                Brushes.SaddleBrown,
+                Brushes.DarkViolet
+            ];
 
             _gridPen = new Pen(Brushes.Gray, 1.0);
             _gridPen.Freeze();
 
-            // input hooks
+            // Input hooks
             KeyDown += OnKeyDown;
             MouseWheel += OnMouseWheel;
+            MouseDoubleClick += OnMouseDoubleClick;
 
-            // re-render on size change
+            // Re-render on size change
             SizeChanged += (_, __) => InvalidateVisual();
         }
 
-        // Image load logic
+        #region Routines
+        /// <summary>
+        /// Image load logic
+        /// </summary>
         private void LoadImageFromDisk()
         {
             OpenFileDialog dlg = new()
@@ -95,8 +96,9 @@ namespace VirtualTexturePreviewPicker
                 }
             }
         }
-
-        // Split level adjust
+        /// <summary>
+        /// Split level adjust
+        /// </summary>
         private void ChangeSplitLevel(int delta)
         {
             int newLevel = _splitLevel + delta;
@@ -109,7 +111,6 @@ namespace VirtualTexturePreviewPicker
                 InvalidateVisual();
             }
         }
-
         private void UpdateTitle()
         {
             string imgPart = "";
@@ -120,8 +121,11 @@ namespace VirtualTexturePreviewPicker
 
             Title = $"Split Level: {_splitLevel}{imgPart}";
         }
+        #endregion
 
-        // Keyboard handling
+        #region Window Events
+        private void OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+            => LoadImageFromDisk();
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
             // Ctrl+O to open
@@ -134,16 +138,18 @@ namespace VirtualTexturePreviewPicker
 
             switch (e.Key)
             {
-                // up controls
+                // Up controls
                 case Key.Up:
+                case Key.OemPlus:
                 case Key.W:
                 case Key.PageUp:
                     ChangeSplitLevel(+1);
                     e.Handled = true;
                     break;
 
-                // down controls
+                // Down controls
                 case Key.Down:
+                case Key.OemMinus:
                 case Key.S:
                 case Key.PageDown:
                     ChangeSplitLevel(-1);
@@ -151,16 +157,15 @@ namespace VirtualTexturePreviewPicker
                     break;
             }
         }
-
-        // Mouse wheel handling
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
             // standard: positive = up
             ChangeSplitLevel(e.Delta > 0 ? +1 : -1);
             e.Handled = true;
         }
-
-        // core drawing
+        /// <summary>
+        /// Core drawing
+        /// </summary>
         protected override void OnRender(DrawingContext dc)
         {
             base.OnRender(dc);
@@ -168,16 +173,18 @@ namespace VirtualTexturePreviewPicker
             double winW = ActualWidth;
             double winH = ActualHeight;
 
-            // background
+            // Background
             dc.DrawRectangle(Background, null, new Rect(0, 0, winW, winH));
 
-            if (_bitmap == null) return;
+            if (_bitmap == null) 
+                return;
 
-            // compute fit scale keep aspect ratio
+            // Compute fit scale keep aspect ratio
             double imgW = _bitmap.PixelWidth;
             double imgH = _bitmap.PixelHeight;
 
-            if (imgW <= 0 || imgH <= 0) return;
+            if (imgW <= 0 || imgH <= 0) 
+                return;
 
             double scaleX = winW / imgW;
             double scaleY = winH / imgH;
@@ -191,23 +198,25 @@ namespace VirtualTexturePreviewPicker
 
             Rect imgRect = new(offX, offY, drawW, drawH);
 
-            // render image
+            // Render image
             dc.DrawImage(_bitmap, imgRect);
 
-            // compute grid divs
+            // Compute grid divs
             int cols = 1 << (_splitLevel + 1); // 2^(N+1)
             int rows = 1 << _splitLevel;       // 2^N
 
             double cellW = drawW / cols;
             double cellH = drawH / rows;
 
-            // draw grid lines
+            // Draw grid lines
             DrawGridLines(dc, offX, offY, cols, rows, cellW, cellH);
 
-            // draw labels
+            // Draw labels
             DrawCellLabels(dc, offX, offY, cols, rows, cellW, cellH);
         }
+        #endregion
 
+        #region Drawing Routines
         private void DrawGridLines(
             DrawingContext dc,
             double offX,
@@ -280,7 +289,9 @@ namespace VirtualTexturePreviewPicker
                 }
             }
         }
+        #endregion
 
+        #region Helpers
         private static FormattedText CreateFormattedText(string text, Brush brush, double fontSize)
         {
             // The constructor with CultureInfo etc is obsolete but still works in classic WPF.
@@ -294,5 +305,6 @@ namespace VirtualTexturePreviewPicker
                 VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip
             );
         }
+        #endregion
     }
 }
