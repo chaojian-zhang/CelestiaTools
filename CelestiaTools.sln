@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35828.75 d17.13
+VisualStudioVersion = 17.13.35828.75
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtualTextureReferenceSet", "VirtualTextureReferenceSet\VirtualTextureReferenceSet.csproj", "{3CB8D5C5-64AD-42F2-9303-F40FDEBF36A9}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CelestiaCMODConverter", "CelestiaCMODConverter\CelestiaCMODConverter.csproj", "{BC2B8B0C-753B-7969-9A4F-4038E6610BA2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CelestiaStarDatabaseConverter", "CelestiaStarDatabaseConverter\CelestiaStarDatabaseConverter.csproj", "{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtualTexturePreviewPicker", "VirtualTexturePreviewPicker\VirtualTexturePreviewPicker.csproj", "{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01AC26F3-8B67-DDC3-B5DC-7762F9485A7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BE2852D-30C7-4A6E-A8C2-2ACE4EAA9BF5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
