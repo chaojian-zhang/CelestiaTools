@@ -68,6 +68,10 @@ namespace VirtualTexturePreviewPicker
             // Draw image
             dc.DrawImage(Bitmap, imgRect);
 
+            // Dim the background image
+            SolidColorBrush overlayBrush = new SolidColorBrush(Color.FromArgb(120, 0, 0, 0)); // 120≈47% black overlay
+            dc.DrawRectangle(overlayBrush, null, imgRect);
+
             // Grid math using effScale and origin+offset
             DrawGridAndLabels(dc, imgW, imgH, effScale);
         }
